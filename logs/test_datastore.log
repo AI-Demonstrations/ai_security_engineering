@@ -1,0 +1,15 @@
+test_cannot_read_other_tenants_customer (tests.test_datastore.TestHardenedStore) ... ok
+test_cannot_read_other_tenants_ticket (tests.test_datastore.TestHardenedStore) ... ok
+test_customer_default_is_name_only (tests.test_datastore.TestHardenedStore) ... ok
+test_customer_fields_are_allowlisted (tests.test_datastore.TestHardenedStore) ... ok
+test_reads_own_tenant (tests.test_datastore.TestHardenedStore) ... ok
+test_rejects_malformed_ticket_id_with_generic_error (tests.test_datastore.TestHardenedStore) ... ok
+test_search_page_size_is_capped (tests.test_datastore.TestHardenedStore) ... ok
+test_search_stays_inside_tenant (tests.test_datastore.TestHardenedStore) ... ok
+test_wildcards_are_treated_literally (tests.test_datastore.TestHardenedStore) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.002s
+
+OK
+tests.test_datastore exit code: 0

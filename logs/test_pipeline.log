@@ -1,0 +1,11 @@
+test_benign_ticket_is_answered (tests.test_pipeline.TestEndToEnd) ... ok
+test_direct_injection (tests.test_pipeline.TestEndToEnd) ... ok
+test_exfiltration_link (tests.test_pipeline.TestEndToEnd) ... ok
+test_indirect_injection_via_poisoned_article (tests.test_pipeline.TestEndToEnd) ... ok
+test_paraphrased_injection_missed_by_input_guard_is_caught_on_output (tests.test_pipeline.TestEndToEnd) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+OK
+tests.test_pipeline exit code: 0

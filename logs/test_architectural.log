@@ -1,0 +1,15 @@
+test_budget_rejects_before_the_call_would_exceed_cap (tests.test_architectural.TestArchitectural) ... ok
+test_customer_context_is_minimized (tests.test_architectural.TestArchitectural)
+Data minimization: the guarded model never sees the card number, so it cannot leak it. ... ok
+test_denial_of_wallet_campaign_stops_at_daily_cap (tests.test_architectural.TestArchitectural) ... ok
+test_pipeline_caps_output_tokens (tests.test_architectural.TestArchitectural) ... ok
+test_pipeline_rejects_request_burst (tests.test_architectural.TestArchitectural) ... ok
+test_rate_limit_cuts_off_burst_then_refills (tests.test_architectural.TestArchitectural) ... ok
+test_rate_limit_is_per_tenant (tests.test_architectural.TestArchitectural) ... ok
+test_rejects_unknown_api_key (tests.test_architectural.TestArchitectural) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.013s
+
+OK
+tests.test_architectural exit code: 0

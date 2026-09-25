@@ -1,0 +1,15 @@
+test_allows_links_to_company_domain (tests.test_output_guard.TestOutputGuard) ... ok
+test_blocks_canary_leak (tests.test_output_guard.TestOutputGuard) ... ok
+test_blocks_markdown_image_to_unapproved_domain (tests.test_output_guard.TestOutputGuard) ... ok
+test_blocks_oversized_reply (tests.test_output_guard.TestOutputGuard) ... ok
+test_blocks_verbatim_system_prompt_without_canary (tests.test_output_guard.TestOutputGuard) ... ok
+test_keeps_company_email (tests.test_output_guard.TestOutputGuard) ... ok
+test_leaves_non_card_digit_runs (tests.test_output_guard.TestOutputGuard) ... ok
+test_redacts_card_number (tests.test_output_guard.TestOutputGuard) ... ok
+test_redacts_ssn_phone_and_outside_email (tests.test_output_guard.TestOutputGuard) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.001s
+
+OK
+tests.test_output_guard exit code: 0

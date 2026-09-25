@@ -1,0 +1,17 @@
+test_allows_clean_articles (tests.test_input_guard.TestInputGuard) ... ok
+test_allows_ordinary_tickets (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_base64_payload (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_direct_instruction_override (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_fake_chat_markup (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_oversized_input (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_poisoned_retrieved_article (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_prompt_extraction (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_role_hijack (tests.test_input_guard.TestInputGuard) ... ok
+test_blocks_zero_width_obfuscation (tests.test_input_guard.TestInputGuard) ... ok
+test_spotlight_marks_retrieved_text_as_data (tests.test_input_guard.TestInputGuard) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.001s
+
+OK
+tests.test_input_guard exit code: 0

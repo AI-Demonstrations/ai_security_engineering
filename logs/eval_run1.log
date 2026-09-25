@@ -1,0 +1,8 @@
+# Guardrail evaluation
+
+- Attacks: 17 · succeeded unguarded **17** · succeeded guarded **0**
+- Benign false-positive rate: **1.5%** (1 of 66)
+- Burst of 20 requests: processed unguarded 20, guarded 5
+- Denial-of-wallet campaign (200 requests): spend unguarded $262.5666, guarded $0.5 (cap $0.5)
+- Fingerprint: `64eb4dea8d6d95fb`
+report written to reports/guardrail_eval.md
