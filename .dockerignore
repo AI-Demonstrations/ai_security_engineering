@@ -1,0 +1,12 @@
+.git
+**/__pycache__
+*.pyc
+logs/
+reports/
+tests/
+attacks/
+@eaDir
+.DS_Store
+deploy/k8s/
+deploy/azure/
+*.md

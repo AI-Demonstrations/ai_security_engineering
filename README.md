@@ -66,5 +66,14 @@ Points worth discussing in class:
 | One architectural guardrail implemented, with test output showing a block | `architectural.py`, `logs/test_architectural.log` |
 | Denial of wallet: cost cap and how it is enforced | `BudgetGuard` + output-token cap; campaign result in `reports/guardrail_eval.md` |
 
+## Deploying securely on Azure (`deploy/`)
+
+`deploy/SECURITY_PRACTICES.md` covers securing this system as multiple containers on AKS,
+communicating over Service Bus topics: the port map (one public port), hardened image and
+pods, workload identity instead of secrets, default-deny network policies, private
+endpoints, and locked-down messaging. It links each practice to a working file:
+`deploy/Dockerfile`, `deploy/app/` (HTTP server, secure Service Bus publisher/consumer),
+`deploy/k8s/` (manifests), and `deploy/azure/` (cluster script, Service Bus Bicep).
+
 Not included: the `THREAT_MODEL.md`, the guardrail implementation plan and the peer
 pen-test reports. Each team writes those for its own system.

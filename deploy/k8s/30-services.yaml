@@ -1,0 +1,14 @@
+# ClusterIP only: reachable inside the cluster, never directly from the internet.
+# Do not use type LoadBalancer or NodePort for application services; the ingress
+# controller is the single public entry point (40-ingress.yaml).
+# The worker has no Service at all: it only consumes messages.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ticketbot
+spec:
+  type: ClusterIP
+  selector: {app: gateway}
+  ports:
+    - {name: http, port: 80, targetPort: http, protocol: TCP}

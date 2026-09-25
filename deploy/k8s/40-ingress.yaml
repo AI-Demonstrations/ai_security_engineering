@@ -1,0 +1,36 @@
+# The ONLY public entry point: HTTPS on 443 via the AKS application routing add-on
+# (managed NGINX). TLS terminates here with a certificate kept in Key Vault.
+#
+#   * only POST /predict is routed; /health and /ready stay cluster-internal
+#   * HTTP is redirected to HTTPS
+#   * request body capped to match the app's own 8 KB limit
+#   * per-client-IP rate limit at the edge, in front of the app's per-tenant limit
+#
+# For a web application firewall, put Azure Application Gateway for Containers (or Front
+# Door) with WAF in front instead of, or ahead of, this ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+  namespace: ticketbot
+  annotations:
+    kubernetes.azure.com/tls-cert-keyvault-uri: "https://<KEYVAULT_NAME>.vault.azure.net/certificates/tickets-tls"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8k"
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts: ["tickets.example.com"]
+      secretName: keyvault-gateway
+  rules:
+    - host: tickets.example.com
+      http:
+        paths:
+          - path: /predict
+            pathType: Exact
+            backend:
+              service:
+                name: gateway
+                port: {name: http}

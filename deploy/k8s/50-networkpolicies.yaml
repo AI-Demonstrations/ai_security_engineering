@@ -1,0 +1,92 @@
+# Zero-trust networking inside the namespace: deny everything, then allow only the flows
+# the design needs. Enforced by Azure CNI powered by Cilium (azure/cluster.sh).
+#
+#   ingress controller ──8080──► gateway ──5671/443──► private endpoints (Service Bus, Key Vault)
+#                                   └──────443───────► internet egress via Azure Firewall
+#   worker ────────────────────────5671/443──► private endpoints
+#
+# Kubernetes NetworkPolicy works on IPs, not host names. Egress to Entra ID sign-in and
+# to a hosted LLM is allowed on 443 here and narrowed to an FQDN allowlist by Azure
+# Firewall on the cluster's egress route.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ticketbot
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: ticketbot
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-ingress-from-ingress-controller
+  namespace: ticketbot
+spec:
+  podSelector:
+    matchLabels: {app: gateway}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: app-routing-system}
+      ports:
+        - {protocol: TCP, port: 8080}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-to-private-endpoints
+  namespace: ticketbot
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [gateway, worker-billing]}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: {cidr: 10.20.2.0/24}           # private-endpoint subnet (azure/cluster.sh)
+      ports:
+        - {protocol: TCP, port: 5671}             # Service Bus AMQP over TLS
+        - {protocol: TCP, port: 443}              # Service Bus AMQP-over-WebSockets, Key Vault
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-internet-https-via-firewall
+  namespace: ticketbot
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [gateway, worker-billing]}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8                        # nothing else inside the VNet or cluster
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32                # the node's instance metadata service: pods use
+                                                  # workload identity, never the node's identity
+      ports:
+        - {protocol: TCP, port: 443}

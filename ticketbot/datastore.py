@@ -39,7 +39,7 @@ class DataAccessError(Exception):
 
 class TicketStore:
     def __init__(self):
-        self.db = sqlite3.connect(":memory:")
+        self.db = sqlite3.connect(":memory:", check_same_thread=False)   # callers serialize access
         self.db.executescript(
             "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT,"
             " phone TEXT, card_number TEXT);"

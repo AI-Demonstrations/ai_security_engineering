@@ -1,0 +1,12 @@
+# Pod Security Admission at the "restricted" level: the API server itself refuses any pod
+# that runs as root, allows privilege escalation, keeps Linux capabilities, or lacks a
+# seccomp profile. A mistake in a later manifest fails loudly instead of deploying.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ticketbot
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
