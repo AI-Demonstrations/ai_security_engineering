@@ -68,12 +68,144 @@ Points worth discussing in class:
 
 ## Deploying securely on Azure (`deploy/`)
 
-`deploy/SECURITY_PRACTICES.md` covers securing this system as multiple containers on AKS,
-communicating over Service Bus topics: the port map (one public port), hardened image and
-pods, workload identity instead of secrets, default-deny network policies, private
-endpoints, and locked-down messaging. It links each practice to a working file:
-`deploy/Dockerfile`, `deploy/app/` (HTTP server, secure Service Bus publisher/consumer),
-`deploy/k8s/` (manifests), and `deploy/azure/` (cluster script, Service Bus Bicep).
+The `deploy/` folder shows how to run this system as multiple Docker containers on Azure
+Kubernetes Service (AKS), communicating through Service Bus topics and serving users over
+HTTPS. `deploy/SECURITY_PRACTICES.md` explains *why* each practice matters and links it to
+the file that implements it; this section explains *what is where* and *how to use it*.
+
+### Architecture
+
+```
+ Internet ──443/TLS──► Ingress (NGINX, app routing) ──8080──► gateway pods ──5671──► Service Bus topic
+                                                                  │                  "tickets.routed"
+                                                                  │                        │ subscription "billing"
+                                                                  └──443──► Key Vault      ▼
+                                                                                    worker-billing pods
+                                                                                    (no inbound port)
+```
+
+- **gateway** is the only component users can reach. It runs the guarded pipeline from this
+  repo (`ticketbot/`) behind a small HTTP server and publishes a `TicketRouted` message.
+- **worker-billing** reads only the `billing` subscription. Nothing calls it, so it has no
+  Service and no open port.
+- **Service Bus** and **Key Vault** are reachable only through private endpoints inside the
+  virtual network. Neither has a public address.
+
+### Files
+
+| File | What it does | Key security settings |
+|---|---|---|
+| `deploy/Dockerfile` | Builds the gateway image from the repo root | Multi-stage build; non-root UID 10001; listens on 8080; no secrets in any layer |
+| `.dockerignore` | Keeps tests, logs, attack data and manifests out of the image | Smaller image, less to scan, nothing sensitive copied |
+| `deploy/app/server.py` | HTTP front end: `GET /health`, `GET /ready`, `POST /predict` | 8 KB body cap; JSON only; API key in a header; generic errors; no `Server` banner; per-tenant rate limit and budget cap |
+| `deploy/app/messaging.py` | Service Bus publisher and consumer | Entra ID sign-in, no connection strings; schema check before send and after receive; dead-letter bad messages; ignores duplicates |
+| `deploy/app/schema/` | The Module 05 `TicketRouted` schema and its validator | The same contract is enforced in the eval harness and in production |
+| `deploy/k8s/00-namespace.yaml` | The `ticketbot` namespace | Pod Security Admission `restricted`: the cluster rejects root or privileged pods |
+| `deploy/k8s/10-serviceaccounts.yaml` | One service account per component | Each linked to its own Azure managed identity; no Kubernetes API token mounted |
+| `deploy/k8s/20-deployments.yaml` | gateway (2 replicas) and worker-billing | Read-only filesystem; all capabilities dropped; CPU/memory limits; health probes; image pinned by digest |
+| `deploy/k8s/30-services.yaml` | Internal address for the gateway | ClusterIP only; no `LoadBalancer` or `NodePort` |
+| `deploy/k8s/40-ingress.yaml` | The single public entry point | HTTPS with a Key Vault certificate; HTTP→HTTPS redirect; only `/predict` routed; body cap; per-IP rate limit |
+| `deploy/k8s/50-networkpolicies.yaml` | Pod-to-pod and outbound traffic rules | Default deny all; allow only DNS, ingress→gateway, and egress to private endpoints and HTTPS; node metadata endpoint blocked |
+| `deploy/k8s/60-secretproviderclass.yaml` | Mounts a Key Vault secret as a file | For unavoidable third-party keys only; read-only file, not an environment variable |
+| `deploy/azure/cluster.sh` | Creates the network, registry, AKS cluster, Key Vault and identities | Entra ID + Azure RBAC for `kubectl`; no local admin; API server IP allowlist; workload identity; Cilium network policy; Defender; automatic patching |
+| `deploy/azure/servicebus.bicep` | Service Bus namespace, topic, subscriptions, access and private endpoint | Shared-key access disabled; TLS 1.2; private endpoint only; send/receive roles scoped to one topic or subscription; retry cap then dead-letter |
+
+### Ports
+
+| Port | Where | Who can reach it |
+|---|---|---|
+| 443 | Ingress controller | The internet (the only public port) |
+| 80 | Ingress controller | The internet, only to redirect to 443 |
+| 80 → 8080 | `gateway` Service → gateway container | Only the ingress controller (NetworkPolicy) |
+| none | worker-billing | Nobody; it only reads from Service Bus |
+| 5671 / 443 out | gateway, worker → Service Bus, Key Vault | Private-endpoint subnet `10.20.2.0/24` only |
+| 443 out | gateway, worker → Entra ID sign-in, LLM API | Through Azure Firewall with a host-name allowlist |
+| 53 out | all pods → CoreDNS | `kube-system` only |
+
+### Try the container locally
+
+Build from the repo root, then run it with the same restrictions Kubernetes applies:
+
+```bash
+docker build -f deploy/Dockerfile -t ticketbot:dev .
+docker run -d --name tb -p 127.0.0.1:18080:8080 \
+  --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges ticketbot:dev
+
+docker exec tb id -u                               # 10001, not root
+curl -s http://127.0.0.1:18080/health              # {"status": "ok"}
+curl -s -H 'Content-Type: application/json' -H 'X-API-Key: acme-key-123' \
+  -d '{"customer_id":"c1","text":"I was charged twice this month."}' \
+  http://127.0.0.1:18080/predict                   # 200, a drafted reply
+docker rm -f tb
+```
+
+Expected responses from `POST /predict`:
+
+| Request | Status |
+|---|---|
+| Valid key and an ordinary ticket | 200 |
+| Missing or unknown `X-API-Key` | 401 |
+| Oversized body (> 8 KB) | 413 |
+| Content type other than `application/json` | 415 |
+| Blocked by a guardrail (e.g. prompt injection) | 422 |
+| Rate limit or daily budget exceeded | 429 |
+| Anything unexpected on the server | 500, with details only in the server log |
+
+The demo API keys (`acme-key-123`, `globex-key-456`) are hard-coded in
+`ticketbot/pipeline.py` for local testing only. In a real deployment, keys come from a
+secret store or you use Entra ID tokens instead.
+
+### Check the manifests and templates without deploying
+
+```bash
+# Kubernetes schema validation (runs in a container, nothing to install)
+docker run --rm -v "$PWD/deploy/k8s:/k8s:ro" ghcr.io/yannh/kubeconform:latest \
+  -strict -summary -ignore-missing-schemas /k8s
+
+# Compile the Service Bus template
+az bicep build --file deploy/azure/servicebus.bicep --stdout > /dev/null
+
+# Syntax-check the cluster script
+bash -n deploy/azure/cluster.sh
+```
+
+### Deploying to Azure
+
+Everything below creates **billable** resources. Read `deploy/azure/cluster.sh` before
+running it.
+
+1. **Create the infrastructure:** `az login`, then run `deploy/azure/cluster.sh`. It creates the
+   resource group, virtual network, container registry, AKS cluster, Key Vault, one managed
+   identity per component, and the Service Bus namespace (via `servicebus.bicep`).
+2. **Build and push the images** to your registry, then note each image's digest:
+   `az acr build -r <ACR_NAME> -t ticketbot-gateway:1.0 -f deploy/Dockerfile .`
+3. **Store secrets and the TLS certificate in Key Vault:** the `llm-api-key` secret (only if
+   your LLM provider does not accept Entra ID) and the `tickets-tls` certificate.
+4. **Fill in the placeholders** in `deploy/k8s/`:
+
+   | Placeholder | Where to get it |
+   |---|---|
+   | `<ACR_NAME>`, `<DIGEST>` | Your registry name; the digest printed by `az acr build` |
+   | `<GATEWAY_IDENTITY_CLIENT_ID>`, `<WORKER_BILLING_IDENTITY_CLIENT_ID>` | `az identity show -g rg-ticketbot -n id-gateway --query clientId -o tsv` (and `id-worker-billing`) |
+   | `<SB_NAMESPACE>` | The `namespaceName` passed to `servicebus.bicep` |
+   | `<KEYVAULT_NAME>`, `<TENANT_ID>` | Your Key Vault name; `az account show --query tenantId -o tsv` |
+   | `tickets.example.com` | Your DNS name for the service |
+   | `10.20.2.0/24` | Your private-endpoint subnet, if you changed it in `cluster.sh` |
+
+5. **Apply the manifests** in order (the file numbers set it):
+   `az aks get-credentials -g rg-ticketbot -n aks-ticketbot && kubectl apply -f deploy/k8s/`
+6. **Verify:** `kubectl -n ticketbot get pods` shows all pods running; a request to
+   `https://tickets.example.com/predict` returns 200; `/health` from outside returns 404,
+   because only `/predict` is routed.
+
+### What has and has not been verified
+
+| Verified here | Not verified |
+|---|---|
+| Image builds; runs as UID 10001 on a read-only filesystem; every status code in the table above | A live deployment to Azure |
+| All 12 core Kubernetes resources pass `kubeconform -strict` | The Key Vault `SecretProviderClass` (no public schema to check against) |
+| `servicebus.bicep` compiles (10 resources) | `worker-billing` image: the manifest references it, but only the gateway image is built here |
+| Every `az aks create` flag exists in Azure CLI 2.90.0 | Azure Firewall and the subscription budget, which are described but not scripted |
 
 Not included: the `THREAT_MODEL.md`, the guardrail implementation plan and the peer
 pen-test reports. Each team writes those for its own system.
