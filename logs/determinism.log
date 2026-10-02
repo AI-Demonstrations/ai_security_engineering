@@ -1,1 +1,2 @@
 DETERMINISM: eval run1 and run2 fingerprints match
+DETERMINISM: nn eval run1 and run2 fingerprints match

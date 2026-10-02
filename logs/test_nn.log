@@ -1,0 +1,20 @@
+test_adversarial_training_restores_robustness (tests.test_nn.TestEvasion) ... ok
+test_small_perturbation_breaks_undefended_model (tests.test_nn.TestEvasion) ... ok
+test_budget_limits_clone_quality (tests.test_nn.TestExtraction) ... ok
+test_label_only_api_hides_confidences (tests.test_nn.TestExtraction) ... ok
+test_probability_api_can_be_cloned (tests.test_nn.TestExtraction) ... ok
+test_query_budget_refuses_excess_queries (tests.test_nn.TestExtraction) ... ok
+test_label_only_output_shrinks_membership_leak (tests.test_nn.TestMembership) ... ok
+test_baseline_accuracy (tests.test_nn.TestModel) ... ok
+test_activation_clustering_removes_poison (tests.test_nn.TestPoisoning) ... ok
+test_backdoor_is_stealthy_and_effective (tests.test_nn.TestPoisoning) ... ok
+test_pickle_load_runs_attacker_code (tests.test_nn.TestSupplyChain) ... ok
+test_safe_load_accepts_genuine_weights (tests.test_nn.TestSupplyChain) ... ok
+test_safe_load_refuses_malicious_file_without_running_it (tests.test_nn.TestSupplyChain) ... ok
+test_safe_load_refuses_pickle_even_with_matching_hash (tests.test_nn.TestSupplyChain) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 2.750s
+
+OK
+tests.test_nn exit code: 0

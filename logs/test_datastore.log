@@ -9,7 +9,7 @@ test_search_stays_inside_tenant (tests.test_datastore.TestHardenedStore) ... ok
 test_wildcards_are_treated_literally (tests.test_datastore.TestHardenedStore) ... ok
 
 ----------------------------------------------------------------------
-Ran 9 tests in 0.002s
+Ran 9 tests in 0.004s
 
 OK
 tests.test_datastore exit code: 0

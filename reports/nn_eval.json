@@ -1,0 +1,210 @@
+{
+  "evasion": {
+    "undefended": {
+      "clean_accuracy": 0.964,
+      "fgsm": {
+        "0.05": 0.833,
+        "0.1": 0.513,
+        "0.15": 0.127
+      },
+      "pgd": {
+        "0.05": 0.833,
+        "0.1": 0.48,
+        "0.15": 0.096
+      }
+    },
+    "adversarially_trained": {
+      "clean_accuracy": 0.962,
+      "fgsm": {
+        "0.05": 0.907,
+        "0.1": 0.782,
+        "0.15": 0.607
+      },
+      "pgd": {
+        "0.05": 0.907,
+        "0.1": 0.769,
+        "0.15": 0.549
+      }
+    }
+  },
+  "poisoning": {
+    "poison_rows": 45,
+    "of_training_rows": 945,
+    "target_label": 7,
+    "clean_data_model": {
+      "clean_accuracy": 0.964,
+      "backdoor_success": 0.0
+    },
+    "poisoned_model": {
+      "clean_accuracy": 0.971,
+      "backdoor_success": 0.993
+    },
+    "after_activation_clustering": {
+      "clean_accuracy": 0.951,
+      "backdoor_success": 0.052
+    },
+    "removed_poison_rows": 42,
+    "removed_clean_rows": 2,
+    "cluster_findings": [
+      {
+        "label": 0,
+        "cluster_size": 33,
+        "relabel_confidence": 0.046,
+        "removed": false
+      },
+      {
+        "label": 1,
+        "cluster_size": 39,
+        "relabel_confidence": 0.663,
+        "removed": false
+      },
+      {
+        "label": 2,
+        "cluster_size": 42,
+        "relabel_confidence": 0.413,
+        "removed": false
+      },
+      {
+        "label": 3,
+        "cluster_size": 45,
+        "relabel_confidence": 0.192,
+        "removed": false
+      },
+      {
+        "label": 4,
+        "cluster_size": 20,
+        "relabel_confidence": 0.348,
+        "removed": false
+      },
+      {
+        "label": 5,
+        "cluster_size": 41,
+        "relabel_confidence": 0.276,
+        "removed": false
+      },
+      {
+        "label": 6,
+        "cluster_size": 33,
+        "relabel_confidence": 0.221,
+        "removed": false
+      },
+      {
+        "label": 7,
+        "cluster_size": 44,
+        "relabel_confidence": 0.909,
+        "removed": true
+      },
+      {
+        "label": 8,
+        "cluster_size": 42,
+        "relabel_confidence": 0.571,
+        "removed": false
+      },
+      {
+        "label": 9,
+        "cluster_size": 16,
+        "relabel_confidence": 0.54,
+        "removed": false
+      }
+    ],
+    "operating_range": [
+      {
+        "poison_rows": 20,
+        "removed_poison_rows": 19,
+        "removed_clean_rows": 2,
+        "backdoor_success_after": 0.013
+      },
+      {
+        "poison_rows": 45,
+        "removed_poison_rows": 42,
+        "removed_clean_rows": 2,
+        "backdoor_success_after": 0.052
+      },
+      {
+        "poison_rows": 90,
+        "removed_poison_rows": 0,
+        "removed_clean_rows": 0,
+        "backdoor_success_after": 0.995
+      }
+    ]
+  },
+  "extraction": {
+    "victim_clean_accuracy": 0.964,
+    "runs": [
+      {
+        "api_output": "probs",
+        "query_budget": null,
+        "queries_attempted": 900,
+        "queries_answered": 900,
+        "clone_agreement": 0.978,
+        "clone_accuracy": 0.949,
+        "victim_accuracy_on_transferred_fgsm": 0.687
+      },
+      {
+        "api_output": "label",
+        "query_budget": null,
+        "queries_attempted": 900,
+        "queries_answered": 900,
+        "clone_agreement": 0.96,
+        "clone_accuracy": 0.949,
+        "victim_accuracy_on_transferred_fgsm": 0.713
+      },
+      {
+        "api_output": "label",
+        "query_budget": 50,
+        "queries_attempted": 900,
+        "queries_answered": 50,
+        "clone_agreement": 0.802,
+        "clone_accuracy": 0.796,
+        "victim_accuracy_on_transferred_fgsm": 0.824
+      }
+    ]
+  },
+  "membership": {
+    "members": 100,
+    "non_members": 100,
+    "runs": [
+      {
+        "training": "overfit (300 epochs, no L2)",
+        "api_output": "probs",
+        "test_accuracy": 0.904,
+        "attack_advantage": 0.37
+      },
+      {
+        "training": "overfit (300 epochs, no L2)",
+        "api_output": "label",
+        "test_accuracy": 0.904,
+        "attack_advantage": 0.09
+      },
+      {
+        "training": "regularized (L2 0.02)",
+        "api_output": "probs",
+        "test_accuracy": 0.904,
+        "attack_advantage": 0.28
+      },
+      {
+        "training": "regularized (L2 0.02)",
+        "api_output": "label",
+        "test_accuracy": 0.904,
+        "attack_advantage": 0.08
+      }
+    ]
+  },
+  "supply_chain": {
+    "pickle_load_of_malicious_file": {
+      "payload_ran": true,
+      "model_still_works": 0.964
+    },
+    "safe_load_of_malicious_file": {
+      "payload_ran": false,
+      "refused": "hash 766ab9fd6e8d... does not match the pinned bf1a37e8c35d..."
+    },
+    "safe_load_of_genuine_file": {
+      "accuracy": 0.964
+    },
+    "safe_load_of_tampered_weights": {
+      "refused": "hash dce9bad36f7b... does not match the pinned bf1a37e8c35d..."
+    }
+  },
+  "fingerprint": "cfbea681599d6984"
+}

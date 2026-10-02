@@ -9,7 +9,7 @@ test_redacts_card_number (tests.test_output_guard.TestOutputGuard) ... ok
 test_redacts_ssn_phone_and_outside_email (tests.test_output_guard.TestOutputGuard) ... ok
 
 ----------------------------------------------------------------------
-Ran 9 tests in 0.001s
+Ran 9 tests in 0.005s
 
 OK
 tests.test_output_guard exit code: 0

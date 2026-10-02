@@ -5,7 +5,11 @@ each team to implement and evidence: **input**, **output** and **architectural**
 system is the Module 05 support-ticket router, extended with a reply-drafting step
 that reads knowledge-base articles.
 
-Everything runs offline with the Python standard library. The model is a deterministic
+A second, separate example (`digitnet/`) covers the threats to a **basic neural
+network**: adversarial examples, training-data poisoning, model extraction, membership
+inference and malicious model files. See [Basic neural network](#basic-neural-network-digitnet).
+
+The LLM example runs offline with the Python standard library; `digitnet/` adds NumPy. The model is a deterministic
 stand-in (`ticketbot/llm.py`) that behaves like a gullible real model, so every result is
 free and repeatable. To test a real model, replace it with a client that has the same
 `complete(messages, max_output_tokens)` signature.
@@ -13,12 +17,13 @@ free and repeatable. To test a real model, replace it with a client that has the
 ## Quick start
 
 ```bash
-python3 -m unittest discover -s tests -t . -v    # 42 tests
-python3 eval_guardrails.py                       # attack/benign evaluation -> reports/
+python3 -m unittest discover -s tests -t . -v    # 56 tests (14 are the neural-network ones)
+python3 eval_guardrails.py                       # LLM attack/benign evaluation -> reports/
+python3 eval_nn.py                               # neural-network attacks and defenses -> reports/
 ./run_evidence.sh                                # all evidence logs -> logs/
 ```
 
-Tested on Python 3.9.
+Tested on Python 3.9 with NumPy 2.0.
 
 ## Files
 
@@ -34,6 +39,8 @@ Tested on Python 3.9.
 | `attacks/benign.jsonl` | 66 legitimate tickets (the Module 05 golden set plus 6 that look like attacks) |
 | `eval_guardrails.py` | Measures the guardrails the way Module 05 measures a model |
 | `tests/` | One test file per layer, plus end-to-end and data-layer tests |
+| `digitnet/` | The basic neural-network example: data, model, attacks, defenses (see below) |
+| `eval_nn.py` | Runs each neural-network attack with and without its defense; writes `reports/nn_eval.{json,md}` |
 | `run_evidence.sh` | Writes the per-guardrail test logs and evaluation runs to `logs/` |
 
 ## Results (`reports/guardrail_eval.md`)
@@ -65,6 +72,56 @@ Points worth discussing in class:
 | One output guardrail implemented, with test output showing a block | `output_guard.py`, `logs/test_output_guard.log` |
 | One architectural guardrail implemented, with test output showing a block | `architectural.py`, `logs/test_architectural.log` |
 | Denial of wallet: cost cap and how it is enforced | `BudgetGuard` + output-token cap; campaign result in `reports/guardrail_eval.md` |
+
+## Basic neural network (`digitnet/`)
+
+The guardrails above protect an LLM application. A classic neural network is attacked
+differently: through its gradients, its training data, its prediction API and its weight
+files. `digitnet/` shows each of these on a model small enough to read in one sitting: a
+64-64-10 multilayer perceptron, written in NumPy, trained on the UCI 8x8 handwritten
+digits (bundled in `digitnet/data/`, CC BY 4.0, pinned by SHA-256). Training takes a
+fraction of a second and every result is seeded, so `eval_nn.py` prints the same numbers
+on every run.
+
+| File | What it is |
+|---|---|
+| `digitnet/mlp.py` | The model: forward pass, SGD training (optionally adversarial), gradient with respect to the input, weights-only save |
+| `digitnet/data.py` | Loads the hash-pinned dataset; fixed train / test / attacker-pool split |
+| `digitnet/attacks.py` | FGSM and PGD, backdoor poisoning, `PredictionAPI`, model extraction, membership inference, malicious pickle |
+| `digitnet/defenses.py` | Adversarial training, activation clustering, hash-pinned weights-only loading |
+| `tests/test_nn.py` | 14 tests: each attack succeeds undefended, and its defense stops or bounds it |
+
+### Results (`reports/nn_eval.md`)
+
+| Attack (stage) | MITRE ATLAS | Undefended | Defense | Defended |
+|---|---|---|---|---|
+| Evasion: PGD, ε = 0.10 (inference) | AML.T0015, AML.T0043 | accuracy 96.4% → 48.0% | Adversarial training | 76.9% under attack; clean accuracy 96.2% |
+| Backdoor: 45 poisoned images (training) | AML.T0020, AML.T0018 | trigger works on 99.3% of digits; clean accuracy unchanged | Activation clustering, then retrain | 5.2%; removed 42 of 45 poisoned rows and 2 clean rows |
+| Extraction: 900 queries (API) | AML.T0024.002 | clone agrees 97.8%; attacks crafted on it drop the victim to 68.7% | Label-only output + 50-query budget | clone agrees 80.2%; transferred attack 82.4% |
+| Membership inference (API) | AML.T0024.000 | advantage 0.37 | Label-only output | 0.09 |
+| Malicious model file (loading) | AML.T0010.003, AML.T0011 | `pickle.load` runs the attacker's code; the model still works | SHA-256 pin + `np.load(allow_pickle=False)` | refused; nothing runs |
+
+Points worth discussing in class:
+
+- **Clean accuracy hides attacks.** The backdoored model scores *higher* on the test set
+  than the clean one. A normal evaluation will not find a backdoor.
+- **Evaluate a defense with a stronger attack than you trained against.** The model is
+  adversarially trained with FGSM; the table reports PGD too, and robustness still falls
+  as ε grows.
+- **Every defense has an operating range.** Activation clustering removes the backdoor at
+  2% and 5% poisoning but misses it completely at 10% (`operating_range` in the report),
+  so it is one layer next to data provenance, not a replacement for it.
+- **Extraction is bounded, not prevented.** Hiding confidences barely slows a cloner on
+  this task; the query budget is what limits it. A clone is also a free testbed for
+  crafting attacks that transfer to the real model.
+- **Regularization helps privacy less than you expect.** L2 lowers the membership
+  advantage only from 0.37 to 0.28; not returning confidences lowers it to 0.09. Formal
+  guarantees need differential privacy (DP-SGD), which is out of scope here.
+- **A model file is code if you unpickle it.** `torch.load` without `weights_only=True`
+  is the same `pickle.load`. Use weights-only formats (`safetensors`, `.npz` with pickling
+  off) and pin the hash recorded at training time.
+
+`digitnet/` is not part of the deployed gateway; the Dockerfile copies only `ticketbot/`.
 
 ## Deploying securely on Azure (`deploy/`)
 
