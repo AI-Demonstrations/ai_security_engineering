@@ -23,6 +23,10 @@ python3 eval_nn.py                               # neural-network attacks and de
 ./run_evidence.sh                                # all evidence logs -> logs/
 ```
 
+Each demo in the Module 06 slides is also one script, run from anywhere: `bash demos/demo1_nn.sh` through
+`bash demos/demo7_datalayer.sh` (5a and 5b for indirect injection). `demos/demo.py` is the `demo` helper
+the slides use: it sends one ticket unguarded, then guarded.
+
 Tested on Python 3.9 with NumPy 2.0.
 
 ## Files
@@ -41,6 +45,7 @@ Tested on Python 3.9 with NumPy 2.0.
 | `tests/` | One test file per layer, plus end-to-end and data-layer tests |
 | `digitnet/` | The basic neural-network example: data, model, attacks, defenses (see below) |
 | `eval_nn.py` | Runs each neural-network attack with and without its defense; writes `reports/nn_eval.{json,md}` |
+| `demos/` | One script per slide demo (`demo1_nn.sh` … `demo7_datalayer.sh`) and the `demo.py` helper |
 | `run_evidence.sh` | Writes the per-guardrail test logs and evaluation runs to `logs/` |
 
 ## Results (`reports/guardrail_eval.md`)
